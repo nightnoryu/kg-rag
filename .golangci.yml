@@ -1,0 +1,87 @@
+version: "2"
+
+run:
+  timeout: 5m
+  issues-exit-code: 1
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - bodyclose
+    - importas
+    - dogsled
+    - dupl
+    - gochecknoinits
+    - gocognit
+    - gocritic
+    - gocyclo
+    - revive
+    - gosec
+    - misspell
+    - nakedret
+    - prealloc
+    - unconvert
+    - whitespace
+    - rowserrcheck
+    - goconst
+    - asciicheck
+    - nestif
+    - copyloopvar
+    - sqlclosecheck
+
+  settings:
+    govet:
+      enable:
+        - shadow
+
+    gocritic:
+      disabled-checks:
+        - sloppyReassign
+        - whyNoLint
+      enabled-tags:
+        - experimental
+        - opinionated
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+    - gci
+
+  settings:
+    goimports:
+      local-prefixes:
+        - rag-server
+
+    gci:
+      custom-order: true
+      sections:
+        - standard
+        - default
+        - prefix(rag-server/)
+      section-separator:
+        - standard
+        - default
+        - prefix(rag-server/)
+
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

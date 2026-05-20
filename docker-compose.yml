@@ -1,0 +1,53 @@
+services:
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: librechat
+    environment:
+      OPENAI_BASE_URL: http://rag-server:8080/v1
+      OPENAI_API_KEY: no-auth
+      OPENAI_MODELS: llama3
+    ports:
+      - '0.0.0.0:3000:3000'
+    restart: unless-stopped
+    depends_on:
+      - rag-server
+
+  rag-server:
+    container_name: rag-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GRAPHDB_ENDPOINT: http://graphdb:7200/repositories/rag
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: llama3
+    volumes:
+      - './bin/rag-server:/app/bin/rag-server:ro'
+    restart: unless-stopped
+    depends_on:
+      - graphdb
+      - ollama
+
+  graphdb:
+    image: mirror.gcr.io/ontotext/graphdb:10.5.0-free
+    environment:
+      - GDB_JAVA_OPTS=-Xmx1g
+    volumes:
+      - graphdb-data:/opt/graphdb/home
+      - ./graphdb-config/data:/data
+
+  ollama:
+    image: mirror.gcr.io/ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  graphdb-data:
+  ollama-data:

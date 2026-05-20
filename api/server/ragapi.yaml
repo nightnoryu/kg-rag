@@ -1,0 +1,114 @@
+openapi: 3.0.0
+
+info:
+  title: RAG Knowledge Graph API
+  version: 1.0.0
+
+paths:
+  /v1/models:
+    get:
+      summary: List available models
+      operationId: listModels
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+
+  /v1/chat/completions:
+    post:
+      summary: Create chat completion
+      operationId: createChatCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+            text/event-stream:
+              schema:
+                type: string
+
+components:
+  schemas:
+    ModelsResponse:
+      type: object
+      properties:
+        object:
+          type: string
+          enum: [ list ]
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+
+    Model:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum: [ model ]
+
+    ChatCompletionRequest:
+      type: object
+      properties:
+        model:
+          type: string
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        stream:
+          type: boolean
+          default: false
+        temperature:
+          type: number
+      required:
+        - model
+        - messages
+
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [ system, user, assistant ]
+        content:
+          type: string
+      required:
+        - role
+        - content
+
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum: [ chat.completion ]
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Choice'
+
+    Choice:
+      type: object
+      properties:
+        index:
+          type: integer
+        message:
+          $ref: '#/components/schemas/Message'
+        finish_reason:
+          type: string
