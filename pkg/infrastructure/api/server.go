@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -57,28 +56,9 @@ func (h *restHandler) ListModels(_ context.Context) (*ragapi.ModelsResponse, err
 		Object: ragapi.NewOptModelObject(ragapi.ModelObjectModel),
 	}
 
-	var ollamaModels []ragapi.Model
-	resp, err := http.Get(h.ollamaURL + "/api/tags")
-	if err == nil {
-		defer resp.Body.Close()
-		var tags struct {
-			Models []struct {
-				Name string `json:"name"`
-			} `json:"models"`
-		}
-		if err := json.NewDecoder(resp.Body).Decode(&tags); err == nil {
-			for _, m := range tags.Models {
-				ollamaModels = append(ollamaModels, ragapi.Model{
-					ID:     ragapi.NewOptString(m.Name),
-					Object: ragapi.NewOptModelObject(ragapi.ModelObjectModel),
-				})
-			}
-		}
-	}
-
 	return &ragapi.ModelsResponse{
 		Object: ragapi.NewOptModelsResponseObject(ragapi.ModelsResponseObjectList),
-		Data:   append([]ragapi.Model{ragModel}, ollamaModels...),
+		Data:   []ragapi.Model{ragModel},
 	}, nil
 }
 
