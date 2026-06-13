@@ -2,6 +2,8 @@ package llm
 
 import (
 	"bufio"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -101,6 +103,8 @@ func (c *client) GenerateStream(prompt string) io.Reader {
 		}
 		defer resp.Body.Close()
 
+		id := generateStreamID()
+
 		scanner := bufio.NewScanner(resp.Body)
 		for scanner.Scan() {
 			line := scanner.Text()
@@ -115,9 +119,44 @@ func (c *client) GenerateStream(prompt string) io.Reader {
 				continue
 			}
 			if data.Response != "" {
-				fmt.Fprintf(pw, "data: %s\n\n", data.Response)
+				chunk := map[string]interface{}{
+					"id":     id,
+					"object": "chat.completion.chunk",
+					"model":  c.model,
+					"choices": []map[string]interface{}{
+						{
+							"index": 0,
+							"delta": map[string]string{
+								"role":    "assistant",
+								"content": data.Response,
+							},
+						},
+					},
+				}
+				jsonBytes, err := json.Marshal(chunk)
+				if err != nil {
+					continue
+				}
+				fmt.Fprintf(pw, "data: %s\n\n", jsonBytes)
 			}
 			if data.Done {
+				doneChunk := map[string]interface{}{
+					"id":     id,
+					"object": "chat.completion.chunk",
+					"model":  c.model,
+					"choices": []map[string]interface{}{
+						{
+							"index":         0,
+							"delta":         map[string]interface{}{},
+							"finish_reason": "stop",
+						},
+					},
+				}
+				jsonBytes, err := json.Marshal(doneChunk)
+				if err == nil {
+					fmt.Fprintf(pw, "data: %s\n\n", jsonBytes)
+				}
+				fmt.Fprintf(pw, "data: [DONE]\n\n")
 				break
 			}
 		}
@@ -153,6 +192,14 @@ func (c *client) Embed(text string) ([]float64, error) {
 		return nil, fmt.Errorf("decode embed response: %w", err)
 	}
 	return result.Embedding, nil
+}
+
+func generateStreamID() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "chatcmpl-error"
+	}
+	return "chatcmpl-" + hex.EncodeToString(b)
 }
 
 //nolint:bodyclose // caller is responsible for closing resp.Body
