@@ -1,4 +1,4 @@
-package cosine
+package ranker
 
 import (
 	"math"
@@ -8,7 +8,7 @@ import (
 
 type cosineRanker struct{}
 
-func NewCosineRanker() app.CosineRanker {
+func NewCosineRanker() app.Ranker {
 	return &cosineRanker{}
 }
 

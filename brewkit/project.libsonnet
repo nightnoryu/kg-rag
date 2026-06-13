@@ -18,6 +18,7 @@ local gosources = [
     "cmd",
     "api",
     "pkg",
+    "data",
 ];
 
 {

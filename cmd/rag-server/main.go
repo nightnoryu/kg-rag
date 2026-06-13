@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -12,11 +14,12 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"rag-server/data/prompts"
 	"rag-server/pkg/app"
 	"rag-server/pkg/infrastructure/api"
-	"rag-server/pkg/infrastructure/cosine"
 	"rag-server/pkg/infrastructure/graphdb"
 	"rag-server/pkg/infrastructure/llm"
+	"rag-server/pkg/infrastructure/ranker"
 )
 
 func main() {
@@ -38,9 +41,25 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 	ctx = listenOSKillSignals(ctx)
 
 	kgClient := graphdb.NewClient(cnf.GraphDBEndpoint)
-	llmClient := llm.NewClient(cnf.OllamaURL, cnf.OllamaModel, cnf.EmbeddingModel)
-	ranker := cosine.NewCosineRanker()
-	aiKnowledgeService := app.NewAIKnowledgeService(kgClient, llmClient, ranker, cnf.RagTopK)
+	cosineRanker := ranker.NewCosineRanker()
+
+	promptsMap, err := prompts.LoadPrompts()
+	if err != nil {
+		logger.Fatal(fmt.Errorf("load prompts: %w", err))
+	}
+
+	entityPrompt, ok := promptsMap[prompts.PromptEntityRetrieval]
+	if !ok {
+		logger.Fatal(fmt.Errorf("missing prompt: %s", prompts.PromptEntityRetrieval))
+	}
+
+	answerPrompt, ok := promptsMap[prompts.PromptKGAugmentedAnswer]
+	if !ok {
+		logger.Fatal(fmt.Errorf("missing prompt: %s", prompts.PromptKGAugmentedAnswer))
+	}
+
+	llmClient := llm.NewClient(cnf.OllamaURL, cnf.OllamaModel, cnf.EmbeddingModel, entityPrompt)
+	aiKnowledgeService := app.NewAIKnowledgeService(kgClient, llmClient, cosineRanker, cnf.RagTopK, answerPrompt)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/resilience/ready", func(w http.ResponseWriter, _ *http.Request) {
@@ -72,7 +91,7 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 		}
 	}()
 
-	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		logger.Fatal(err)
 	}
 }

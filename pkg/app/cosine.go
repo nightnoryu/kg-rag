@@ -1,5 +1,5 @@
 package app
 
-type CosineRanker interface {
+type Ranker interface {
 	Similarity(a, b []float64) float64
 }

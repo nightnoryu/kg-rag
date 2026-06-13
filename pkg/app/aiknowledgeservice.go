@@ -15,22 +15,25 @@ type AIKnowledgeService interface {
 func NewAIKnowledgeService(
 	kgClient KGClient,
 	llmClient LLMClient,
-	ranker CosineRanker,
+	ranker Ranker,
 	topK int,
+	answerPrompt string,
 ) AIKnowledgeService {
 	return &service{
-		kgClient:  kgClient,
-		llmClient: llmClient,
-		ranker:    ranker,
-		topK:      topK,
+		kgClient:     kgClient,
+		llmClient:    llmClient,
+		ranker:       ranker,
+		topK:         topK,
+		answerPrompt: answerPrompt,
 	}
 }
 
 type service struct {
-	kgClient  KGClient
-	llmClient LLMClient
-	ranker    CosineRanker
-	topK      int
+	kgClient     KGClient
+	llmClient    LLMClient
+	ranker       Ranker
+	topK         int
+	answerPrompt string
 }
 
 type scoredFact struct {
@@ -87,15 +90,7 @@ func (s *service) buildAugmentedPrompt(prompt string) (string, error) {
 	}
 
 	context := strings.Join(factLines, "\n")
-	return fmt.Sprintf(`You are a knowledgeable assistant. Use the following facts from the knowledge base to answer the question.
-If the facts don't contain enough information, use your general knowledge but indicate when you're going beyond the provided facts.
-
-Relevant facts:
-%s
-
-Question: %s
-
-Answer:`, context, prompt), nil
+	return fmt.Sprintf(s.answerPrompt, context, prompt), nil
 }
 
 func (s *service) retrieveFacts(entities []string) ([]string, error) {

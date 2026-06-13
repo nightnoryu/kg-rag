@@ -11,29 +11,26 @@ import (
 	"rag-server/pkg/app"
 )
 
-func NewClient(baseURL, model, embeddingModel string) app.LLMClient {
+func NewClient(baseURL, model, embeddingModel, entityRetrievalPrompt string) app.LLMClient {
 	return &client{
-		baseURL:        strings.TrimRight(baseURL, "/"),
-		model:          model,
-		embeddingModel: embeddingModel,
-		client:         http.DefaultClient,
+		baseURL:               strings.TrimRight(baseURL, "/"),
+		model:                 model,
+		embeddingModel:        embeddingModel,
+		entityRetrievalPrompt: entityRetrievalPrompt,
+		client:                http.DefaultClient,
 	}
 }
 
 type client struct {
-	baseURL        string
-	model          string
-	embeddingModel string
-	client         *http.Client
+	baseURL               string
+	model                 string
+	embeddingModel        string
+	entityRetrievalPrompt string
+	client                *http.Client
 }
 
 func (c *client) ExtractEntities(text string) ([]string, error) {
-	prompt := fmt.Sprintf(`Extract the key entities (people, organizations, locations, dates, technical terms, concepts) from the following text.
-Return ONLY a JSON array of strings, nothing else. No markdown, no explanation.
-
-Text: %s
-
-Entities:`, text)
+	prompt := fmt.Sprintf(c.entityRetrievalPrompt, text)
 
 	out, err := c.GenerateString(prompt)
 	if err != nil {
