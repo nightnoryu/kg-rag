@@ -21,11 +21,22 @@ Full stack with Docker Compose: `docker compose up` (requires pre-built `bin/rag
 ## Package layout
 
 ```
-cmd/rag-server/          — binary entrypoint, env config
-api/server/ragapi.yaml   — OpenAPI spec (source of truth for routes)
-pkg/app/                 — domain interfaces (KGClient, LLMClient, AIKnowledgeService)
-pkg/infrastructure/      — concrete implementations (graphdb/, llm/, api/)
+cmd/rag-server/              — binary entrypoint, env config
+api/server/ragapi.yaml       — OpenAPI spec (source of truth for routes)
+data/prompts/                — prompt templates (prompts.json, embedded at compile time)
+pkg/app/                     — domain interfaces (KGClient, LLMClient, Ranker, AIKnowledgeService)
+pkg/infrastructure/          — concrete implementations (graphdb/, llm/, api/, ranker/)
 ```
+
+## Import order
+
+Enforced by `gci` (configured in `.golangci.yml`). Three sections, separated by blank lines:
+
+1. **Standard library** (`fmt`, `os`, `net/http`, …)
+2. **External** (third-party modules like `github.com/gorilla/mux`)
+3. **Local** (`rag-server/…`)
+
+`goimports` is also enabled with local prefix `rag-server`.
 
 ## Env vars (required at runtime)
 
@@ -34,15 +45,19 @@ pkg/infrastructure/      — concrete implementations (graphdb/, llm/, api/)
 | `GRAPHDB_ENDPOINT`   | `http://graphdb:7200/repositories/rag` |
 | `OLLAMA_URL`         | `http://ollama:11434`                  |
 | `OLLAMA_MODEL`       | `llama3`                               |
+| `EMBEDDING_MODEL`    | `nomic-embed-text`                     |
 | `SERVE_REST_ADDRESS` | `:8080` (default)                      |
+| `RAG_TOP_K`          | `3` (default)                          |
 
 Parsed via `kelseyhightower/envconfig` in `cmd/rag-server/config.go`.
 
-## Lint and format
+## Prompts
 
-```
-brewkit build check          # lint (see .golangci.yml, 20+ linters enabled)
-```
+Prompt templates live in `data/prompts/prompts.json` and are embedded at compile time via `//go:embed`. Load them with `prompts.LoadPrompts()` — it returns a `map[string]string`. Use constants from `data/prompts/promptsembedder.go` (`prompts.PromptKGAugmentedAnswer`, `prompts.PromptEntityRetrieval`) as map keys. Templates use `fmt.Sprintf`-style `%s` placeholders.
+
+## Lint
+
+See .golangci.yml, 20+ linters enabled. Run linter with `brewkit build check`.
 
 Formatters (`gofmt`, `goimports`, `gci`) are enforced by golangci-lint. Local prefix: `rag-server`.
 
@@ -62,7 +77,6 @@ CI/build system uses brewkit (`brewkit.jsonnet`), do not use plain `go build`.
 
 - GraphDB 10.5.0-free (SPARQL + Lucene full-text search)
 - Ollama (streaming LLM via `/api/generate`)
-- No tests exist yet.
 
 ## RAG algorithm
 
