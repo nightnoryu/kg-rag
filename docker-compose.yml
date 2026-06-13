@@ -44,7 +44,7 @@ services:
       OLLAMA_MODEL: llama3
       EMBEDDING_MODEL: nomic-embed-text
     volumes:
-      - './bin:/app/bin'
+      - "$HOME/projects/personal/kg-rag/bin/rag-server:/app/bin/rag-server:ro"
     depends_on:
       - graphdb
       - ollama
