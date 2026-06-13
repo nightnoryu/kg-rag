@@ -52,7 +52,7 @@ type restHandler struct {
 
 func (h *restHandler) ListModels(_ context.Context) (*ragapi.ModelsResponse, error) {
 	ragModel := ragapi.Model{
-		ID:     ragapi.NewOptString("rag-knowledge-graph"),
+		ID:     ragapi.NewOptString("kg-rag"),
 		Object: ragapi.NewOptModelObject(ragapi.ModelObjectModel),
 	}
 

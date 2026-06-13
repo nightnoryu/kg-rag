@@ -5,10 +5,12 @@ interface:
 
 endpoints:
   custom:
-    - name: "KG-RAG"
+    - name: "AI Knowledge"
+      apiKey: "rag-server"
       baseURL: "http://rag-server:8080/api/v1"
+      titleConvo: false
       models:
-        default: ["rag-knowledge-graph"]
+        default: ["kg-rag"]
         fetch: true
 
     - name: "Ollama"
