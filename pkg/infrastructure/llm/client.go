@@ -21,7 +21,6 @@ type client struct {
 	client  *http.Client
 }
 
-// Generate sends a prompt and returns a streaming response reader.
 func (c *client) Generate(prompt string) (*http.Response, error) {
 	body := map[string]interface{}{
 		"model":  c.model,

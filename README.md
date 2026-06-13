@@ -1,1 +1,1 @@
-# GraphQL RAG Server in Go
+# KG-RAG server in Go
