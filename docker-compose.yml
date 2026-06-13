@@ -54,7 +54,7 @@ services:
         condition: service_healthy
 
   graphdb:
-    image: mirror.gcr.io/ontotext/graphdb:11.0.1
+    image: mirror.gcr.io/ontotext/graphdb:10.6.4
     container_name: graphdb
     restart: unless-stopped
     environment:
@@ -69,7 +69,7 @@ services:
       start_period: 10s
 
   graphdb-init:
-    image: mirror.gcr.io/ontotext/graphdb:11.0.1
+    image: mirror.gcr.io/ontotext/graphdb:10.6.4
     container_name: graphdb-init
     restart: on-failure
     entrypoint: ["/bin/bash", "-c"]
