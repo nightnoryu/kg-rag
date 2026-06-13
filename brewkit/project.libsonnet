@@ -59,7 +59,7 @@ local gosources = [
             }
             for appID in appIDs // expand build target for each appID
         } + {
-            [appID + "debug"]: {
+            [appID + "-debug"]: {
                 from: "gobase",
                 workdir: "/app",
                 cache: gocache,
