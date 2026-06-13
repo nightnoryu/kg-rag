@@ -6,13 +6,16 @@ services:
     ports:
       - "127.0.0.1:3080:3080"
     environment:
+      - NODE_ENV=production
+      - ALLOW_REGISTRATION=true
       - HOST=0.0.0.0
       - PORT=3080
-      - JWT_SECRET=16f8c0ef4a5d391b26034086c628469d3f9f497f08163ab9b40137092f2909ef
-      - JWT_REFRESH_SECRET=eaa5191f2914e30b9387fd84e254e4ba6fc51b4654968a9b0803b456a54b8418
       - MONGO_URI=mongodb://librechat-db:27017/LibreChat
-      - ALLOW_EMAIL_LOGIN=true
-      - ALLOW_REGISTRATION=true
+      - JWT_SECRET='nP7HUK9z2a1Vcc8ITmh0i0ul15qi1n0Xw7POmd6HlNo='
+      - JWT_REFRESH_SECRET='hy6HOP89CIuwUtPoxDxuWhYsgMKwmeFORSPEJrB5hBo='
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - EMBEDDINGS_PROVIDER=ollama
+      - EMBEDDINGS_MODEL=nomic-embed-text
     volumes:
       - ./librechat.yaml:/app/librechat.yaml:ro
     extra_hosts:
@@ -41,7 +44,7 @@ services:
       OLLAMA_MODEL: llama3
       EMBEDDING_MODEL: nomic-embed-text
     volumes:
-      - './bin/rag-server:/app/bin/rag-server:ro'
+      - './bin:/app/bin'
     depends_on:
       - graphdb
       - ollama
@@ -69,7 +72,6 @@ services:
       retries: 5
 
 volumes:
-  librechat-data:
   librechat-db-data:
   graphdb-data:
   ollama-data:

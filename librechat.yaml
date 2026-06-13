@@ -1,14 +1,21 @@
 version: 1.3.9
-cache: true
+
+interface:
+  customWelcome: 'Sail away'
+
 endpoints:
   custom:
-    - name: "KG_RAG"
+    - name: "KG-RAG"
       baseURL: "http://rag-server:8080/api/v1"
       models:
         default: ["rag-knowledge-graph"]
         fetch: true
-    - ollama:
-      baseURL: "http://ollama:11434"
+
+    - name: "Ollama"
+      apiKey: "ollama"
+      baseURL: "http://ollama:11434/v1/"
+      titleConvo: true
+      titleModel: current_model
       models:
         default: ["llama3"]
-        fetch: true
+        fetch: false
