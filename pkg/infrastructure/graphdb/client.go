@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -28,13 +29,15 @@ func (c *client) RetrieveKnowledge(question string) ([]string, error) {
 
 	sparql := fmt.Sprintf(`
 		PREFIX luc: <http://www.ontotext.com/connectors/lucene#>
-		PREFIX luc-index: <http://www.ontotext.com/connectors/lucene/instance#kg_index>
+		PREFIX luc-index: <http://www.ontotext.com/connectors/lucene/instance#>
+		
 		SELECT ?text WHERE {
 			?search a luc-index:kg_index ;
-			        luc:query "%s" ;
-			        luc:entities ?entity .
+					luc:query "%s" ;
+					luc:entities ?entity .
 			?entity <http://example.org/text> ?text .
-		} LIMIT 5
+		}
+		LIMIT 5
 	`, searchQuery)
 
 	result, err := c.query(sparql)
@@ -63,15 +66,19 @@ func (c *client) query(sparql string) (map[string]interface{}, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/sparql-results+json")
+
 	resp, err := c.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("reading response: %w", err)
 	}
+	log.Println(string(body))
+
 	var result map[string]interface{}
 	err = json.Unmarshal(body, &result)
 	return result, err

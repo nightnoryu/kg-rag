@@ -1,7 +1,0 @@
-@prefix ex: <http://example.org/> .
-
-ex:Entity1 a ex:Concept ;
-    ex:text "Example fact about entity one" .
-
-ex:Entity2 a ex:Concept ;
-    ex:text "Example fact about entity two" .
