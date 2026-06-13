@@ -59,7 +59,7 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 	}
 
 	llmClient := llm.NewClient(cnf.OllamaURL, cnf.OllamaModel, cnf.EmbeddingModel, entityPrompt)
-	aiKnowledgeService := app.NewAIKnowledgeService(kgClient, llmClient, cosineRanker, cnf.RagTopK, answerPrompt)
+	aiKnowledgeService := app.NewAIKnowledgeService(kgClient, llmClient, cosineRanker, cnf.RagTopK, answerPrompt, logger)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/resilience/ready", func(w http.ResponseWriter, _ *http.Request) {
