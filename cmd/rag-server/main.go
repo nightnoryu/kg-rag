@@ -10,9 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"rag-server/pkg/infrastructure/api"
-
 	"github.com/gorilla/mux"
+
+	"rag-server/pkg/app"
+	"rag-server/pkg/infrastructure/api"
+	"rag-server/pkg/infrastructure/cosine"
+	"rag-server/pkg/infrastructure/graphdb"
+	"rag-server/pkg/infrastructure/llm"
 )
 
 func main() {
@@ -33,13 +37,18 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 
 	ctx = listenOSKillSignals(ctx)
 
+	kgClient := graphdb.NewClient(cnf.GraphDBEndpoint)
+	llmClient := llm.NewClient(cnf.OllamaURL, cnf.OllamaModel, cnf.EmbeddingModel)
+	ranker := cosine.NewCosineRanker()
+	aiKnowledgeService := app.NewAIKnowledgeService(kgClient, llmClient, ranker, cnf.RagTopK)
+
 	router := mux.NewRouter()
 	router.HandleFunc("/resilience/ready", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, http.StatusText(http.StatusOK))
 	})
 
-	apiServer, err := api.NewAPIServer(nil)
+	apiServer, err := api.NewAPIServer(nil, aiKnowledgeService, llmClient, cnf.OllamaURL, cnf.OllamaModel)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -53,7 +62,17 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 		ReadTimeout:       time.Hour,
 		WriteTimeout:      time.Hour,
 	}
-	if err := httpServer.ListenAndServe(); err != nil {
+
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			logger.Printf("server shutdown error: %v", err)
+		}
+	}()
+
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		logger.Fatal(err)
 	}
 }

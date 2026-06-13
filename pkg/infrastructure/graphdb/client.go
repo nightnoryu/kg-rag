@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"rag-server/pkg/app"
 )
 
-func NewClient(endpoint string) *client {
+func NewClient(endpoint string) app.KGClient {
 	return &client{
 		endpoint: endpoint,
 		client:   http.DefaultClient,
@@ -24,7 +26,7 @@ type client struct {
 // Query runs a SPARQL query and returns the JSON result.
 func (c *client) Query(sparql string) (map[string]interface{}, error) {
 	queryURL := c.endpoint + "?query=" + url.QueryEscape(sparql)
-	req, err := http.NewRequest("GET", queryURL, nil)
+	req, err := http.NewRequest("GET", queryURL, http.NoBody)
 	if err != nil {
 		return nil, err
 	}

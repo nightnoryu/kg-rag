@@ -2,38 +2,144 @@ package api
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
+
+	"github.com/ogen-go/ogen/middleware"
 
 	"rag-server/api/server/ragapi"
 	"rag-server/pkg/app"
-
-	"github.com/ogen-go/ogen/middleware"
 )
 
 func NewAPIServer(
 	middlewares []middleware.Middleware,
 	aiKnowledgeService app.AIKnowledgeService,
+	llmClient app.LLMClient,
+	ollamaURL string,
+	ollamaModel string,
 ) (http.Handler, error) {
-	apiHandler := newRESTHandler()
+	apiHandler := newRESTHandler(aiKnowledgeService, llmClient, ollamaURL, ollamaModel)
 	return ragapi.NewServer(
 		apiHandler,
 		ragapi.WithMiddleware(middlewares...),
 	)
 }
 
-func newRESTHandler() ragapi.Handler {
-	return &restHandler{}
+func newRESTHandler(
+	aiKnowledgeService app.AIKnowledgeService,
+	llmClient app.LLMClient,
+	ollamaURL string,
+	ollamaModel string,
+) ragapi.Handler {
+	return &restHandler{
+		aiKnowledgeService: aiKnowledgeService,
+		llmClient:          llmClient,
+		ollamaURL:          strings.TrimRight(ollamaURL, "/"),
+		ollamaModel:        ollamaModel,
+	}
 }
 
 type restHandler struct {
+	aiKnowledgeService app.AIKnowledgeService
+	llmClient          app.LLMClient
+	ollamaURL          string
+	ollamaModel        string
 }
 
 func (h *restHandler) ListModels(_ context.Context) (*ragapi.ModelsResponse, error) {
-	// TODO implement
-	panic("implement me")
+	ragModel := ragapi.Model{
+		ID:     ragapi.NewOptString("rag-knowledge-graph"),
+		Object: ragapi.NewOptModelObject(ragapi.ModelObjectModel),
+	}
+
+	var ollamaModels []ragapi.Model
+	resp, err := http.Get(h.ollamaURL + "/api/tags")
+	if err == nil {
+		defer resp.Body.Close()
+		var tags struct {
+			Models []struct {
+				Name string `json:"name"`
+			} `json:"models"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&tags); err == nil {
+			for _, m := range tags.Models {
+				ollamaModels = append(ollamaModels, ragapi.Model{
+					ID:     ragapi.NewOptString(m.Name),
+					Object: ragapi.NewOptModelObject(ragapi.ModelObjectModel),
+				})
+			}
+		}
+	}
+
+	return &ragapi.ModelsResponse{
+		Object: ragapi.NewOptModelsResponseObject(ragapi.ModelsResponseObjectList),
+		Data:   append([]ragapi.Model{ragModel}, ollamaModels...),
+	}, nil
 }
 
-func (h *restHandler) CreateChatCompletion(ctx context.Context, req *ragapi.ChatCompletionRequest) (ragapi.CreateChatCompletionRes, error) {
-	// TODO implement
-	panic("implement me")
+func (h *restHandler) CreateChatCompletion(_ context.Context, req *ragapi.ChatCompletionRequest) (ragapi.CreateChatCompletionRes, error) {
+	prompt := extractUserMessage(req.Messages)
+	if prompt == "" {
+		return nil, fmt.Errorf("no user message found")
+	}
+
+	if req.Stream.Or(false) {
+		return h.handleStreaming(prompt), nil
+	}
+
+	answer, err := h.aiKnowledgeService.GenerateAnswer(prompt)
+	if err != nil {
+		return nil, err
+	}
+
+	id, _ := generateID()
+	return &ragapi.ChatCompletionResponse{
+		ID:     ragapi.NewOptString(id),
+		Object: ragapi.NewOptChatCompletionResponseObject(ragapi.ChatCompletionResponseObjectChatCompletion),
+		Choices: []ragapi.Choice{
+			{
+				Index:        ragapi.NewOptInt(0),
+				Message:      ragapi.NewOptMessage(ragapi.Message{Role: ragapi.MessageRoleAssistant, Content: answer}),
+				FinishReason: ragapi.NewOptString("stop"),
+			},
+		},
+	}, nil
+}
+
+func (h *restHandler) handleStreaming(prompt string) ragapi.CreateChatCompletionRes {
+	pr, pw := io.Pipe()
+
+	go func() {
+		defer pw.Close()
+		stream := h.aiKnowledgeService.GenerateAnswerStream(prompt)
+		if _, err := io.Copy(pw, stream); err != nil {
+			pw.CloseWithError(err)
+		}
+	}()
+
+	return &ragapi.CreateChatCompletionOKTextEventStream{
+		Data: pr,
+	}
+}
+
+func extractUserMessage(messages []ragapi.Message) string {
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role == ragapi.MessageRoleUser {
+			return messages[i].Content
+		}
+	}
+	return ""
+}
+
+func generateID() (string, error) {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return "chatcmpl-" + hex.EncodeToString(b), nil
 }

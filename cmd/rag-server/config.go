@@ -19,6 +19,8 @@ type config struct {
 
 	GraphDBEndpoint string `envconfig:"graphdb_endpoint"`
 
-	OllamaURL   string `envconfig:"ollama_url"`
-	OllamaModel string `envconfig:"ollama_model"`
+	OllamaURL      string `envconfig:"ollama_url"`
+	OllamaModel    string `envconfig:"ollama_model"`
+	EmbeddingModel string `envconfig:"embedding_model"`
+	RagTopK        int    `envconfig:"rag_top_k" default:"3"`
 }
