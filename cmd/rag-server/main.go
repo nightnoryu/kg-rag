@@ -72,7 +72,7 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 		logger.Fatal(err)
 	}
 
-	router.PathPrefix("/api/v1").Handler(apiServer)
+	router.PathPrefix("/v1").Handler(apiServer)
 
 	httpServer := &http.Server{
 		Handler:           router,
