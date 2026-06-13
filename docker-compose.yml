@@ -8,21 +8,33 @@ services:
     environment:
       - HOST=0.0.0.0
       - PORT=3080
-      - CREDS_PATH=/app/librechat.yaml
-      - LIBRECHAT_CONFIGURATION=/app/librechat.yaml
+      - JWT_SECRET=16f8c0ef4a5d391b26034086c628469d3f9f497f08163ab9b40137092f2909ef
+      - JWT_REFRESH_SECRET=eaa5191f2914e30b9387fd84e254e4ba6fc51b4654968a9b0803b456a54b8418
+      - MONGO_URI=mongodb://librechat-db:27017/LibreChat
+      - ALLOW_EMAIL_LOGIN=true
+      - ALLOW_REGISTRATION=true
     volumes:
       - ./librechat.yaml:/app/librechat.yaml:ro
-      - librechat-data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
+      - librechat-db
       - rag-server
       - ollama
+
+  librechat-db:
+    container_name: librechat-db
+    image: mirror.gcr.io/mongo:8.0.20
+    restart: unless-stopped
+    volumes:
+      - librechat-db-data:/data/db
+    command: mongod --noauth
 
   rag-server:
     container_name: rag-server
     restart: unless-stopped
     build:
       context: .
-      dockerfile: Dockerfile
     environment:
       GRAPHDB_ENDPOINT: http://graphdb:7200/repositories/rag
       OLLAMA_URL: http://ollama:11434
@@ -35,7 +47,8 @@ services:
       - ollama
 
   graphdb:
-    image: mirror.gcr.io/ontotext/graphdb:10.5.0-free
+    image: mirror.gcr.io/ontotext/graphdb:11.0.1
+    container_name: graphdb
     restart: unless-stopped
     environment:
       - GDB_JAVA_OPTS=-Xmx1g
@@ -57,5 +70,6 @@ services:
 
 volumes:
   librechat-data:
+  librechat-db-data:
   graphdb-data:
   ollama-data:
