@@ -1,4 +1,4 @@
 {
-  "kg-augmented-answer": "You are a knowledgeable assistant. Use the following facts from the knowledge base to answer the question.\nIf the facts don't contain enough information, use your general knowledge but indicate when you're going beyond the provided facts.\n\nRelevant facts:\n%s\n\nQuestion: %s\n\nAnswer:",
+  "kg-augmented-answer": "You are a knowledgeable assistant. Use the following facts from the knowledge base to answer the question.\nIf the facts don't contain enough information, use your general knowledge but WARN EXPLICITLY that nothing was found in the knowledge base.\nAnswer in the same language as the question.\n\nRelevant facts:\n%s\n\nQuestion: %s\n\nAnswer:",
   "entity-retrieval": "Extract the key entities (people, organizations, locations, dates, technical terms, concepts) from the following text.\nReturn ONLY a JSON array of strings, nothing else. No markdown, no explanation.\n\nText: %s\n\nEntities:"
 }
