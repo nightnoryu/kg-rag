@@ -1,11 +1,124 @@
-@prefix ex: <http://example.org/> .
+@prefix : <http://example.org/ru/ontology/> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-ex:John a ex:Person ;
-    ex:name "John Doe" ;
-    ex:age 30 .
+# Классы
+:Писатель rdf:type rdfs:Class .
+:Произведение rdf:type rdfs:Class .
+:Место rdf:type rdfs:Class .
 
-ex:Jane a ex:Person ;
-    ex:name "Jane Smith" ;
-    ex:age 28 .
+# Свойства (связи)
+:родилсяВ rdf:type rdf:Property ;
+    rdfs:domain :Писатель ;
+    rdfs:range :Место .
+
+:жилВ rdf:type rdf:Property ;
+    rdfs:domain :Писатель ;
+    rdfs:range :Место .
+
+:написал rdf:type rdf:Property ;
+    rdfs:domain :Писатель ;
+    rdfs:range :Произведение .
+
+:жанр rdf:type rdf:Property ;
+    rdfs:domain :Произведение ;
+    rdfs:range rdfs:Literal .
+
+:датаРождения rdf:type rdf:Property ;
+    rdfs:domain :Писатель ;
+    rdfs:range xsd:date .
+
+:датаСмерти rdf:type rdf:Property ;
+    rdfs:domain :Писатель ;
+    rdfs:range xsd:date .
+
+:название rdf:type rdf:Property ;
+    rdfs:domain :Произведение ;
+    rdfs:range rdfs:Literal .
+
+:годИздания rdf:type rdf:Property ;
+    rdfs:domain :Произведение ;
+    rdfs:range xsd:gYear .
+
+# Экземпляры сущностей
+
+### Писатели
+:Лев_Толстой rdf:type :Писатель ;
+    :родилсяВ :Москва ;
+    :жилВ :Ясная_Поляна ;
+    :датаРождения "1828-09-09"^^xsd:date ;
+    :датаСмерти "1910-11-20"^^xsd:date ;
+    rdfs:label "Лев Толстой"@ru .
+
+:Фёдор_Достоевский rdf:type :Писатель ;
+    :родилсяВ :Москва ;
+    :жилВ :Санкт_Петербург ;
+    :датаРождения "1821-11-11"^^xsd:date ;
+    :датаСмерти "1881-02-09"^^xsd:date ;
+    rdfs:label "Фёдор Достоевский"@ru .
+
+:Антон_Чехов rdf:type :Писатель ;
+    :родилсяВ :Таганрог ;
+    :жилВ :Москва ;
+    :жилВ :Мелихово ;
+    :датаРождения "1860-01-29"^^xsd:date ;
+    :датаСмерти "1904-07-15"^^xsd:date ;
+    rdfs:label "Антон Чехов"@ru .
+
+### Места
+:Москва rdf:type :Место ;
+    rdfs:label "Москва"@ru .
+
+:Санкт_Петербург rdf:type :Место ;
+    rdfs:label "Санкт-Петербург"@ru .
+
+:Ясная_Поляна rdf:type :Место ;
+    rdfs:label "Ясная Поляна"@ru .
+
+:Таганрог rdf:type :Место ;
+    rdfs:label "Таганрог"@ru .
+
+:Мелихово rdf:type :Место ;
+    rdfs:label "Мелихово"@ru .
+
+### Произведения
+:Война_и_мир rdf:type :Произведение ;
+    :название "Война и мир"@ru ;
+    :жанр "роман-эпопея"@ru ;
+    :годИздания "1869"^^xsd:gYear .
+
+:Анна_Каренина rdf:type :Произведение ;
+    :название "Анна Каренина"@ru ;
+    :жанр "роман"@ru ;
+    :годИздания "1877"^^xsd:gYear .
+
+:Преступление_и_наказание rdf:type :Произведение ;
+    :название "Преступление и наказание"@ru ;
+    :жанр "роман"@ru ;
+    :годИздания "1866"^^xsd:gYear .
+
+:Идиот rdf:type :Произведение ;
+    :название "Идиот"@ru ;
+    :жанр "роман"@ru ;
+    :годИздания "1869"^^xsd:gYear .
+
+:Чайка rdf:type :Произведение ;
+    :название "Чайка"@ru ;
+    :жанр "пьеса"@ru ;
+    :годИздания "1896"^^xsd:gYear .
+
+:Вишнёвый_сад rdf:type :Произведение ;
+    :название "Вишнёвый сад"@ru ;
+    :жанр "пьеса"@ru ;
+    :годИздания "1904"^^xsd:gYear .
+
+### Связи "написал"
+:Лев_Толстой :написал :Война_и_мир .
+:Лев_Толстой :написал :Анна_Каренина .
+
+:Фёдор_Достоевский :написал :Преступление_и_наказание .
+:Фёдор_Достоевский :написал :Идиот .
+
+:Антон_Чехов :написал :Чайка .
+:Антон_Чехов :написал :Вишнёвый_сад .

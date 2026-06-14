@@ -11,7 +11,7 @@
         rep:repositoryType "graphdb:SailRepository" ;
         sr:sailImpl [
             sail:sailType "graphdb:Sail" ;
-            graphdb:base-URL "http://example.org/my-graphdb#" ;
+            graphdb:base-URL "http://example.org/ru/ontology#" ;
             graphdb:defaultNS "" ;
             graphdb:entity-index-size "10000000" ;
             graphdb:entity-id-size "32" ;
