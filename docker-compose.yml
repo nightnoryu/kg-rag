@@ -59,6 +59,8 @@ services:
     restart: unless-stopped
     environment:
       - GDB_JAVA_OPTS=-Xmx2g -Xms2g
+    ports:
+      - "127.0.0.1:7200:7200"
     volumes:
       - graphdb-data:/opt/graphdb/home
     healthcheck:
