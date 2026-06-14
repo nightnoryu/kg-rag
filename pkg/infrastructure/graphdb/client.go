@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"rag-server/pkg/app"
@@ -24,20 +23,19 @@ type client struct {
 	client   *http.Client
 }
 
-func (c *client) RetrieveKnowledge(question string) ([]string, error) {
-	searchQuery := strings.ReplaceAll(question, `"`, `\"`)
+func (c *client) RetrieveKnowledge(entityName string) ([]app.Fact, error) {
+	searchQuery := escapeSPARQLString(strings.ToLower(entityName))
 
 	sparql := fmt.Sprintf(`
-		PREFIX luc: <http://www.ontotext.com/connectors/lucene#>
-		PREFIX luc-index: <http://www.ontotext.com/connectors/lucene/instance#>
+		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+		PREFIX : <http://example.org/ru/ontology/>
 		
-		SELECT ?text WHERE {
-			?search a luc-index:kg_index ;
-					luc:query "%s" ;
-					luc:entities ?entity .
-			?entity <http://example.org/text> ?text .
+		SELECT ?property ?value WHERE {
+		    ?entity rdfs:label ?label .
+		    FILTER(LCASE(STR(?label)) = "%s")
+		    ?entity ?property ?value .
+		    FILTER(!isBlank(?value))
 		}
-		LIMIT 5
 	`, searchQuery)
 
 	result, err := c.query(sparql)
@@ -45,27 +43,66 @@ func (c *client) RetrieveKnowledge(question string) ([]string, error) {
 		return nil, fmt.Errorf("SPARQL query failed: %w", err)
 	}
 
-	// Extract ?text bindings from the JSON result.
-	// For brevity, a simplified extraction; in production use proper JSON parsing.
-	var texts []string
-	if bindings, ok := result["results"].(map[string]interface{})["bindings"].([]interface{}); ok {
-		for _, b := range bindings {
-			bind := b.(map[string]interface{})
-			if t, ok := bind["text"].(map[string]interface{})["value"].(string); ok {
-				texts = append(texts, t)
+	results, ok := result["results"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("no results found")
+	}
+
+	bindingsRaw, ok := results["bindings"].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("bindings is not an array")
+	}
+
+	var facts []app.Fact
+	for _, b := range bindingsRaw {
+		bind, ok := b.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		propMap, ok := bind["property"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		property, ok := propMap["value"].(string)
+		if !ok {
+			continue
+		}
+
+		valMap, ok := bind["value"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		value, ok := valMap["value"].(string)
+		if !ok {
+			continue
+		}
+
+		if displayMap, ok := bind["displayValue"].(map[string]interface{}); ok {
+			if displayVal, ok := displayMap["value"].(string); ok {
+				value = displayVal
 			}
 		}
+
+		facts = append(facts, app.Fact{
+			Property: property,
+			Value:    value,
+		})
 	}
-	return texts, nil
+
+	return facts, nil
 }
 
 func (c *client) query(sparql string) (map[string]interface{}, error) {
-	queryURL := c.endpoint + "?query=" + url.QueryEscape(sparql)
-	req, err := http.NewRequest("GET", queryURL, http.NoBody)
+	req, err := http.NewRequest("GET", c.endpoint, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
+
 	req.Header.Set("Accept", "application/sparql-results+json")
+	q := req.URL.Query()
+	q.Add("query", sparql)
+	req.URL.RawQuery = q.Encode()
 
 	resp, err := c.client.Do(req)
 	if err != nil {
@@ -82,4 +119,13 @@ func (c *client) query(sparql string) (map[string]interface{}, error) {
 	var result map[string]interface{}
 	err = json.Unmarshal(body, &result)
 	return result, err
+}
+
+func escapeSPARQLString(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	return s
 }

@@ -113,7 +113,6 @@ func (s *service) buildAugmentedPrompt(prompt string) (string, error) {
 }
 
 func (s *service) retrieveFacts(entities []string) ([]string, error) {
-	seen := make(map[string]bool)
 	var facts []string
 
 	for _, entity := range entities {
@@ -124,10 +123,7 @@ func (s *service) retrieveFacts(entities []string) ([]string, error) {
 		}
 		s.logger.Printf("rag: entity %q -> %d facts", entity, len(results))
 		for _, fact := range results {
-			if !seen[fact] {
-				seen[fact] = true
-				facts = append(facts, fact)
-			}
+			facts = append(facts, fmt.Sprintf("(%s, %s)", fact.Property, fact.Value))
 		}
 	}
 
