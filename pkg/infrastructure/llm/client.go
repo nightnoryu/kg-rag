@@ -174,7 +174,7 @@ func (c *client) Embed(text string) ([]float64, error) {
 	if err != nil {
 		return nil, fmt.Errorf("marshal embed request: %w", err)
 	}
-	req, err := http.NewRequest("POST", c.baseURL+"/api/embeddings", strings.NewReader(string(b)))
+	req, err := http.NewRequest("POST", c.baseURL+"/api/embed", strings.NewReader(string(b)))
 	if err != nil {
 		return nil, err
 	}
@@ -186,12 +186,12 @@ func (c *client) Embed(text string) ([]float64, error) {
 	defer resp.Body.Close()
 
 	var result struct {
-		Embedding []float64 `json:"embedding"`
+		Embeddings []float64 `json:"embeddings"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("decode embed response: %w", err)
 	}
-	return result.Embedding, nil
+	return result.Embeddings, nil
 }
 
 func generateStreamID() string {
