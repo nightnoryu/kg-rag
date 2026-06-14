@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+
+set -o errexit
+
+SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+
+"$SCRIPT_DIR/kg-rag-compose" down

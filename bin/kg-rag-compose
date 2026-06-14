@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -o errexit
+
+WORK_DIR=$(dirname "$(dirname "$(readlink -f "$0")")")
+PROJECT_NAME=$(basename "$WORK_DIR")
+
+pushd "$WORK_DIR" >/dev/null
+docker compose -p "$PROJECT_NAME" "$@"
+popd >/dev/null
