@@ -1,6 +1,6 @@
 # Architecture
 
-## C4 Diagram
+## C4
 
 ```mermaid
 C4Container
@@ -28,7 +28,34 @@ C4Container
     Rel(kg-rag-server, graphdb, "uses", "sparql")
 ```
 
-## UML Diagram
+## Sequence
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant LibreChat
+    participant KG-RAG
+    participant Ollama
+    participant GraphDB
+    
+    User ->> LibreChat : send prompt
+    LibreChat ->> KG-RAG : send prompt
+    
+    KG-RAG ->> Ollama : extract entities from prompt
+    Ollama -->> KG-RAG : list of entities
+    KG-RAG ->> GraphDB : retrieve knowledge about entities
+    GraphDB -->> KG-RAG : set facts and triplets
+    KG-RAG ->> Ollama : embed retrieved facts
+    Ollama -->> KG-RAG : embeddings
+    KG-RAG ->> KG-RAG : rank by cosine similarity
+    KG-RAG ->> Ollama : final prompt augmented with knowledge
+    Ollama -->> KG-RAG : streaming response
+    KG-RAG -->> LibreChat : streaming response
+    
+    LibreChat -->> User : streaming response
+```
+
+## UML
 
 ```mermaid
 classDiagram
