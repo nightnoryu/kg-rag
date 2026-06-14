@@ -86,6 +86,7 @@ func (s *service) buildAugmentedPrompt(prompt string) (string, error) {
 		return "", fmt.Errorf("retrieve facts: %w", err)
 	}
 	s.logger.Printf("rag: retrieved %d unique facts (%v)", len(facts), time.Since(start))
+	s.logger.Printf("rag: retrieved facts %v", facts)
 
 	if len(facts) == 0 {
 		s.logger.Printf("rag: no facts found, returning original prompt (%v)", time.Since(start))
@@ -110,6 +111,7 @@ func (s *service) buildAugmentedPrompt(prompt string) (string, error) {
 
 	context := strings.Join(factLines, "\n")
 	s.logger.Printf("rag: augmented prompt ready, %d facts included (%v)", limit, time.Since(start))
+	s.logger.Printf("rag: included facts %v", factLines)
 	return fmt.Sprintf(s.answerPrompt, context, prompt), nil
 }
 
@@ -124,7 +126,7 @@ func (s *service) retrieveFacts(entities []string) ([]string, error) {
 		}
 		s.logger.Printf("rag: entity %q -> %d facts", entity, len(results))
 		for _, fact := range results {
-			facts = append(facts, fmt.Sprintf("(%s, %s)", fact.Property, fact.Value))
+			facts = append(facts, fmt.Sprintf("(%s, %s, %s)", entity, fact.Property, fact.Value))
 		}
 	}
 

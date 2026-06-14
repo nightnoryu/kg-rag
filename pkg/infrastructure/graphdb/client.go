@@ -29,11 +29,13 @@ func (c *client) RetrieveKnowledge(entityName string) ([]app.Fact, error) {
 		PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
 		PREFIX : <http://example.org/ru/ontology/>
 		
-		SELECT ?property ?value WHERE {
+		SELECT ?property ?displayValue WHERE {
 		    ?entity rdfs:label ?label .
 		    FILTER(LCASE(STR(?label)) = "%s")
 		    ?entity ?property ?value .
 		    FILTER(!isBlank(?value))
+			OPTIONAL { ?value rdfs:label ?valueLabel . }
+			BIND(COALESCE(?valueLabel, ?value) AS ?displayValue)
 		}
 	`, searchQuery)
 
@@ -68,24 +70,18 @@ func (c *client) RetrieveKnowledge(entityName string) ([]app.Fact, error) {
 			continue
 		}
 
-		valMap, ok := bind["value"].(map[string]interface{})
+		valMap, ok := bind["displayValue"].(map[string]interface{})
 		if !ok {
 			continue
 		}
-		value, ok := valMap["value"].(string)
+		displayValue, ok := valMap["value"].(string)
 		if !ok {
 			continue
-		}
-
-		if displayMap, ok := bind["displayValue"].(map[string]interface{}); ok {
-			if displayVal, ok := displayMap["value"].(string); ok {
-				value = displayVal
-			}
 		}
 
 		facts = append(facts, app.Fact{
-			Property: property,
-			Value:    value,
+			Property: strings.ReplaceAll(property, "http://example.org/ru/ontology/", ""),
+			Value:    strings.ReplaceAll(displayValue, "http://example.org/ru/ontology/", ""),
 		})
 	}
 
