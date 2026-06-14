@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -114,7 +113,6 @@ func (c *client) query(sparql string) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("reading response: %w", err)
 	}
-	log.Println(string(body))
 
 	var result map[string]interface{}
 	err = json.Unmarshal(body, &result)

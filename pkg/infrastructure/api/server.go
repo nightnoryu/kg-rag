@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/ogen-go/ogen/middleware"
 
@@ -19,10 +18,8 @@ func NewAPIServer(
 	middlewares []middleware.Middleware,
 	aiKnowledgeService app.AIKnowledgeService,
 	llmClient app.LLMClient,
-	ollamaURL string,
-	ollamaModel string,
 ) (http.Handler, error) {
-	apiHandler := newRESTHandler(aiKnowledgeService, llmClient, ollamaURL, ollamaModel)
+	apiHandler := newRESTHandler(aiKnowledgeService, llmClient)
 	return ragapi.NewServer(
 		apiHandler,
 		ragapi.WithMiddleware(middlewares...),
@@ -32,22 +29,16 @@ func NewAPIServer(
 func newRESTHandler(
 	aiKnowledgeService app.AIKnowledgeService,
 	llmClient app.LLMClient,
-	ollamaURL string,
-	ollamaModel string,
 ) ragapi.Handler {
 	return &restHandler{
 		aiKnowledgeService: aiKnowledgeService,
 		llmClient:          llmClient,
-		ollamaURL:          strings.TrimRight(ollamaURL, "/"),
-		ollamaModel:        ollamaModel,
 	}
 }
 
 type restHandler struct {
 	aiKnowledgeService app.AIKnowledgeService
 	llmClient          app.LLMClient
-	ollamaURL          string
-	ollamaModel        string
 }
 
 func (h *restHandler) ListModels(_ context.Context) (*ragapi.ModelsResponse, error) {

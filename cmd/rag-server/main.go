@@ -67,7 +67,7 @@ func serveHTTP(ctx context.Context, cnf *config, logger *log.Logger) {
 		_, _ = io.WriteString(w, http.StatusText(http.StatusOK))
 	})
 
-	apiServer, err := api.NewAPIServer(nil, aiKnowledgeService, llmClient, cnf.OllamaURL, cnf.OllamaModel)
+	apiServer, err := api.NewAPIServer(nil, aiKnowledgeService, llmClient)
 	if err != nil {
 		logger.Fatal(err)
 	}
