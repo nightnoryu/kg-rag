@@ -43,6 +43,7 @@ services:
       OLLAMA_URL: http://ollama:11434
       OLLAMA_MODEL: llama3
       EMBEDDING_MODEL: nomic-embed-text
+      RAG_TOP_K: 5
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
