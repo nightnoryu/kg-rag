@@ -61,6 +61,7 @@ func (s *service) GenerateAnswer(prompt string) (string, error) {
 func (s *service) GenerateAnswerStream(prompt string) io.Reader {
 	augmented, err := s.buildAugmentedPrompt(prompt)
 	if err != nil {
+		s.logger.Printf("error generating answer stream: %v", err)
 		pr, pw := io.Pipe()
 		pw.CloseWithError(err)
 		return pr
