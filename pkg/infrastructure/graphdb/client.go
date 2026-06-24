@@ -54,6 +54,7 @@ func (c *client) RetrieveKnowledge(entityName string) ([]app.Fact, error) {
 		return nil, fmt.Errorf("bindings is not an array")
 	}
 
+	// nolint:prealloc
 	var facts []app.Fact
 	for _, b := range bindingsRaw {
 		bind, ok := b.(map[string]interface{})
