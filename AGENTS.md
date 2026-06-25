@@ -44,7 +44,7 @@ Enforced by `gci` (configured in `.golangci.yml`). Three sections, separated by 
 |----------------------|-------------------------------------------|
 | `GRAPHDB_ENDPOINT`   | `http://graphdb:7200/repositories/myrepo` |
 | `OLLAMA_URL`         | `http://ollama:11434`                     |
-| `OLLAMA_MODEL`       | `llama3`                                  |
+| `OLLAMA_MODEL`       | `llama3.1`                                |
 | `EMBEDDING_MODEL`    | `nomic-embed-text`                        |
 | `SERVE_REST_ADDRESS` | `:8080` (default)                         |
 | `RAG_TOP_K`          | `3` (default)                             |

@@ -19,5 +19,5 @@ endpoints:
       titleConvo: true
       titleModel: current_model
       models:
-        default: ["llama3"]
+        default: ["llama3.1"]
         fetch: false
