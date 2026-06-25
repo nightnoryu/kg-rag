@@ -1,4 +1,6 @@
-# KG-RAG implementation in Go
+# KG-RAG
+
+Simple KG-RAG implementation in Go using GraphDB and local inference via ollama.
 
 ## C4
 
