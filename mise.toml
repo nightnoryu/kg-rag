@@ -12,7 +12,7 @@ run = [
 ]
 
 [tasks.generate]
-run = "ogen --target api/server/ragapi --package ragapi --config api/server/ragapi/.ogen.yaml --clean api/server/ragapi/ragapi.yaml"
+run = "ogen --target api/server/ragapi --package ragapi --config api/server/ragapi/.ogen.yml --clean api/server/ragapi.yaml"
 
 [tasks.modules]
 run = "go mod tidy"
