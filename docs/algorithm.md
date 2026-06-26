@@ -12,6 +12,7 @@ The LLM is prompted with the `entity-retrieval` template (`data/prompts/prompts.
 ```
 Extract the key entities (people, organizations, locations, dates, technical terms, concepts) from the following text.
 Return ONLY a JSON array of strings, nothing else. No markdown, no explanation.
+Retrieved entities must be ONLY in Russian language.
 
 Text: <prompt>
 
@@ -28,41 +29,42 @@ Output: ["Kubernetes", "scheduler", "etcd"]
 
 ### 2. Knowledge Retrieval
 
-For each extracted entity, the service calls `kgClient.RetrieveKnowledge(entity)`. The GraphDB client (`pkg/infrastructure/graphdb/client.go`) issues a SPARQL query that uses Ontotext Lucene full-text search against a pre-configured index (`luc-index:kg_index`).
+For each extracted entity, the service calls `kgClient.RetrieveKnowledge(entity)`. The GraphDB client (`pkg/infrastructure/graphdb/client.go`) issues a SPARQL query that performs case-insensitive exact label matching via `rdfs:label`.
 
 The SPARQL query for each entity:
 ```sparql
-PREFIX luc: <http://www.ontotext.com/connectors/lucene#>
-PREFIX luc-index: <http://www.ontotext.com/connectors/lucene/instance#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX : <http://example.org/ru/ontology/>
 
-SELECT ?text WHERE {
-    ?search a luc-index:kg_index ;
-            luc:query "<entity>" ;
-            luc:entities ?entity .
-    ?entity <http://example.org/text> ?text .
+SELECT ?property ?displayValue WHERE {
+    ?entity rdfs:label ?label .
+    FILTER(LCASE(STR(?label)) = "<entity>")
+    ?entity ?property ?value .
+    FILTER(!isBlank(?value))
+    OPTIONAL { ?value rdfs:label ?valueLabel . }
+    BIND(COALESCE(?valueLabel, ?value) AS ?displayValue)
 }
-LIMIT 5
 ```
 
-Results from all entities are deduplicated using a `map[string]bool` (insertion order preserved). Per-entity failures are logged but do not abort the pipeline.
+Each result returns a property and display value (using `rdfs:label` when available, falling back to the raw value). Properties with the `http://example.org/ru/ontology/` prefix are shortened to their local name. Results from all entities are collected as triples `(<entity>, <property>, <displayValue>)`. Per-entity failures are logged but do not abort the pipeline.
 
 **Example:**
 ```
-Entity "Kubernetes"  -> ["Kubernetes is a container orchestration platform...",
-                         "The Kubernetes control plane consists of several components..."]
-Entity "scheduler"   -> ["The kube-scheduler assigns pods to nodes...",
-                         "Scheduler evaluates constraints and scoring functions..."]
-Entity "etcd"        -> ["etcd is a distributed key-value store used by Kubernetes...",
-                         "The API server reads and writes cluster state to etcd..."]
+Entity "Kubernetes"  -> [(Kubernetes, тип, программное обеспечение),
+                         (Kubernetes, разработчик, Google)]
+Entity "scheduler"   -> [(scheduler, тип, компонент),
+                         (scheduler, описание, назначает поды на ноды)]
+Entity "etcd"        -> [(etcd, тип, хранилище ключей),
+                         (etcd, использует, Kubernetes)]
 
-Deduplicated facts: 6 unique facts
+Retrieved facts: 6 triples
 ```
 
 ### 3. Embedding-Based Ranking
 
 If facts were retrieved, the service ranks them by relevance to the original question:
 
-1. The original question is embedded via `llmClient.Embed(question)` (Ollama `/api/embeddings` endpoint, using the `EMBEDDING_MODEL`, e.g., `nomic-embed-text`).
+1. The original question is embedded via `llmClient.Embed(question)` (Ollama `/api/embed` endpoint, using the `EMBEDDING_MODEL`, e.g., `nomic-embed-text`).
 2. Each fact is embedded individually using the same model.
 3. Cosine similarity is computed between the question vector and each fact vector (`ranker.Similarity`, implemented in `pkg/infrastructure/ranker/cosine.go`):
 
@@ -78,12 +80,12 @@ Question embedding:  [-0.02, 0.15, -0.08, ...]  (768-dim for nomic-embed-text)
 
 Fact                                      Cosine Score
 ---------------------------------------------------------
-"kube-scheduler assigns pods to nodes..."  0.847
-"Scheduler evaluates constraints..."       0.792
-"etcd is a distributed key-value store..." 0.651
-"API server reads/writes state to etcd..." 0.618
-"Kubernetes is a container orchestration.." 0.534
-"Kubernetes control plane consists..."     0.489
+(scheduler, описание, назначает поды...)  0.847
+(scheduler, тип, компонент)              0.792
+(etcd, тип, хранилище ключей)            0.651
+(etcd, использует, Kubernetes)           0.618
+(Kubernetes, тип, программное обесп...)   0.534
+(Kubernetes, разработчик, Google)        0.489
 ```
 
 ### 4. Prompt Augmentation
@@ -92,7 +94,8 @@ The top-K facts (controlled by `RAG_TOP_K`, default 3) are formatted as bullet p
 
 ```
 You are a knowledgeable assistant. Use the following facts from the knowledge base to answer the question.
-If the facts don't contain enough information, use your general knowledge but indicate when you're going beyond the provided facts.
+If the are no facts or they don't contain enough information, use your general knowledge.
+Answer ONLY in Russian language.
 
 Relevant facts:
 - <fact_1>
@@ -109,14 +112,15 @@ If no facts were retrieved, the original prompt is sent as-is (no augmentation).
 **Example (topK=3):**
 ```
 You are a knowledgeable assistant. Use the following facts from the knowledge base to answer the question.
-If the facts don't contain enough information, use your general knowledge but indicate when you're going beyond the provided facts.
+If the are no facts or they don't contain enough information, use your general knowledge.
+Answer ONLY in Russian language.
 
 Relevant facts:
-- The kube-scheduler assigns pods to nodes based on resource requirements and constraints
-- Scheduler evaluates constraints and scoring functions to select the best node
-- etcd is a distributed key-value store used by Kubernetes to maintain cluster state
+- (scheduler, тип, компонент)
+- (scheduler, описание, назначает поды на ноды)
+- (etcd, тип, хранилище ключей)
 
-Question: What does the Kubernetes scheduler do and how does it interact with etcd?
+Question: Что делает планировщик в Kubernetes и как он взаимодействует с etcd?
 
 Answer:
 ```
@@ -139,32 +143,32 @@ User Prompt
     │
     ▼
 ┌──────────────────────┐
-│  Entity Extraction   │  LLM → JSON array of entities
+│  Entity Extraction   │  LLM → JSON array of entities (Russian)
 │  (llmClient)         │  Fallback: [prompt] on error
 └────────┬─────────────┘
          │  ["Kubernetes", "scheduler", "etcd"]
          ▼
 ┌──────────────────────┐
-│  Knowledge Retrieval │  SPARQL + Lucene per entity
-│  (kgClient)          │  LIMIT 5 per entity, deduplicated
+│  Knowledge Retrieval │  SPARQL label matching per entity
+│  (kgClient)          │  Returns triples (entity, property, value)
 └────────┬─────────────┘
-         │  6 unique facts
+         │  6 triples
          ▼
 ┌──────────────────────┐
-│  Embedding & Ranking │  Embed question + each fact
+│  Embedding & Ranking │  Embed question + each fact triple
 │  (llmClient + ranker)│  Cosine similarity, descending sort
 └────────┬─────────────┘
          │  scored: [0.847, 0.792, 0.651, ...]
          ▼
 ┌──────────────────────┐
 │  Prompt Augmentation │  Top-K facts → bullet list
-│  (service)           │  Inject into answer prompt template
+│  (service)           │  Inject into answer prompt template (Russian)
 └────────┬─────────────┘
          │  Augmented prompt string
          ▼
 ┌──────────────────────┐
 │  Answer Generation   │  LLM completion (blocking or streaming)
-│  (llmClient)         │
+│  (llmClient)         │  Response in Russian
 └──────────────────────┘
 ```
 
