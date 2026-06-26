@@ -4,18 +4,15 @@ Go server that wires a knowledge graph (GraphDB) + LLM (Ollama) behind an OpenAI
 
 ## Quick start
 
-```
-brewkit build
-```
-
-Full stack with Docker Compose: `docker compose up` (requires pre-built `bin/rag-server`).
+1. Build and lint: `mise run`
+2. Full stack with Docker Compose: `docker compose up` (requires pre-built `bin/rag-server`).
 
 ## Codegen — API handlers are generated
 
 - OpenAPI spec: `api/server/ragapi.yaml`
 - Generator: `ogen` (config in `api/server/ragapi/.ogen.yml`)
 - Generated files: `api/server/ragapi/*_gen.go` (gitignored, never edit)
-- Regenerate: `brewkit build generate`
+- Regenerate: `mise run generate`
 - Implement handlers in `pkg/infrastructure/api/server.go` by filling `restHandler` methods.
 
 ## Package layout
@@ -57,7 +54,7 @@ Prompt templates live in `data/prompts/prompts.json` and are embedded at compile
 
 ## Lint
 
-See .golangci.yml, 20+ linters enabled. Run linter with `brewkit build check`.
+See .golangci.yml, 20+ linters enabled. Run linter with `mise run lint`.
 
 Formatters (`gofmt`, `goimports`, `gci`) are enforced by golangci-lint. Local prefix: `rag-server`.
 
@@ -66,12 +63,10 @@ Formatters (`gofmt`, `goimports`, `gci`) are enforced by golangci-lint. Local pr
 Binary output: `bin/rag-server` (gitignored). For local dev:
 
 ```
-brewkit build rag-server
+mise run build
 ```
 
-For debug builds (disable inlining): `brewkit build rag-server-debug`
-
-CI/build system uses brewkit (`brewkit.jsonnet`), do not use plain `go build`.
+CI/build system uses mise, do not use plain `go build`.
 
 ## Dependencies
 
