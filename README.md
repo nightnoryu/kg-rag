@@ -2,114 +2,47 @@
 
 Simple KG-RAG implementation in Go using GraphDB and local inference via ollama.
 
-## C4
+## How to run
 
-```mermaid
-C4Container
-    title Container diagram
+Prerequisites:
 
-    Person(user, "User", "Organization employee")
+- mise
+- docker
+- docker compose
 
-    Container_Boundary(app, "AI Knowledge") {
-        Container(librechat, "LibreChat", "JavaScript", "Chat Frontend")
-        ContainerDb(mongo, "Mongo", "JavaScript", "Chat database")
+Build with mise:
 
-        Container(kg-rag-server, "KG-RAG Server", "Golang", "Knowledge augmented retrieval")
-        Container(ollama, "Ollama", "Golang", "Model provider")
-        ContainerDb(graphdb, "GraphDB", "Java", "RDF database")
-    }
-
-    Rel(user, librechat, "uses", "http")
-    UpdateRelStyle(user, librechat, $offsetY="30", $offsetX="40")
-
-    Rel(librechat, mongo, "uses", "http")
-    Rel(librechat, ollama, "uses", "http")
-    Rel(librechat, kg-rag-server, "uses", "http")
-
-    Rel(kg-rag-server, ollama, "uses", "async, http")
-    Rel(kg-rag-server, graphdb, "uses", "sparql")
+```shell
+mise run
 ```
 
-## Sequence
+Start the project with prepared script:
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant LibreChat
-    participant KG-RAG
-    participant Ollama
-    participant GraphDB
-    
-    User ->> LibreChat : send prompt
-    LibreChat ->> KG-RAG : send prompt
-    
-    KG-RAG ->> Ollama : extract entities from prompt
-    Ollama -->> KG-RAG : list of entities
-    KG-RAG ->> GraphDB : retrieve knowledge about entities
-    alt facts_found
-        GraphDB -->> KG-RAG : facts and triplets
-        KG-RAG ->> Ollama : embed retrieved facts
-        Ollama -->> KG-RAG : embeddings
-        KG-RAG ->> KG-RAG : rank by cosine similarity
-        KG-RAG ->> Ollama : final prompt augmented with knowledge
-    else
-        GraphDB -->> KG-RAG : no results
-        KG-RAG ->> Ollama : grounded prompt without knowledge
-    end
-    Ollama -->> KG-RAG : streaming response
-    KG-RAG -->> LibreChat : streaming response
-    
-    LibreChat -->> User : streaming response
+```shell
+bin/kg-rag-up
 ```
 
-## UML
+Download the required models:
 
-```mermaid
-classDiagram
-    namespace application {
-        class AIKnowledgeService {
-            + GenerateAnswer(prompt string) (string, error)
-            + GenerateAnswerStream(prompt string) io.Reader
-        }
-
-        class LLMClient {
-            <<interface>>
-            + ExtractEntities(text string) ([]string, error)
-            + Embed(prompt string) (string, error)
-            + Generate(prompt string) (string, error)
-            + GenerateStream(prompt string) io.Reader
-        }
-
-        class KGClient {
-            <<interface>>
-            + RetrieveKnowledge(question string) ([]string, error)
-        }
-        
-        class Ranker {
-            <<interface>>
-            + Similarity(a, b []float64) float64
-        }
-    }
-    
-    namespace infrastructure {
-        class llmClient {
-        }
-        class graphdbClient {
-        }
-        class CosineRanker {
-        }
-        class restHandler {
-            + CreateChatCompletion(request) (result, error)
-        }
-    }
-
-    CosineRanker ..|> Ranker : implements
-    graphdbClient ..|> KGClient : implements
-    llmClient ..|> LLMClient : implements
-    
-    AIKnowledgeService o--> KGClient : aggregates
-    AIKnowledgeService o--> LLMClient : aggregates
-    AIKnowledgeService o--> Ranker : aggregates
-    
-    restHandler o--> AIKnowledgeService : aggregates
+```shell
+docker exec -it ollama ollama pull llama3.1 nomic-embed-text
 ```
+
+After that, the UI will be available at http://localhost:3080
+
+Manage the project with scripts:
+
+```shell
+# Stop the project
+bin/kg-rag-down
+
+# Check containers
+bin/kg-rag-compose ps
+```
+
+## Architecture
+
+- [RAG Algorithm](docs/algorithm.md)
+- [C4](docs/c4.md)
+- [Sequence](docs/sequence.md)
+- [UML](docs/uml.md)
